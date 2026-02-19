@@ -123,53 +123,44 @@ function parseJSON(text) {
 
 async function extractSkills(resumeText) {
   const text = await callClaude(
-    'You are a technical recruiter AI. Extract skills from resumes. IMPORTANT: Return raw JSON only — no markdown, no code fences, no backticks, no explanation. Start your response with { and end with }.',
-    `Extract the candidate's skills from this resume.
+    'You are a technical recruiter AI. IMPORTANT: Return raw JSON only — no markdown, no code fences, no backticks, no explanation. Start your response with { and end with }.',
+    `Extract the top 12 most important technical and professional skills from this resume.
 
-Return JSON with this structure:
-{
-  "skills": [
-    {
-      "name": "skill name",
-      "category": "language|framework|tool|concept|soft",
-      "yearsOfExperience": null,
-      "proficiencySignal": "expert|proficient|familiar|mentioned"
-    }
-  ]
-}
+Return this exact JSON structure (keep it compact):
+{"skills":[{"name":"Python","category":"language","proficiencySignal":"expert"},{"name":"React","category":"framework","proficiencySignal":"proficient"}]}
 
-Resume text:
-${resumeText.substring(0, 8000)}
+Rules:
+- Maximum 12 skills
+- category: language | framework | tool | concept | soft
+- proficiencySignal: expert | proficient | familiar | mentioned
+- Short skill names only (e.g. "Python" not "Python programming language")
+- No yearsOfExperience field needed
 
-Return ONLY the JSON object.`,
-    1024
+Resume:
+${resumeText.substring(0, 6000)}
+
+Return ONLY the JSON object starting with { and ending with }.`,
+    2048
   );
   return parseJSON(text).skills;
 }
 
 async function generateQuestions(skills) {
-  const skillList = skills.map(s => `- ${s.name} (${s.proficiencySignal})`).join('\n');
+  // Limit to top 8 skills to keep response size manageable
+  const topSkills = skills.slice(0, 8);
+  const skillList = topSkills.map(s => s.name).join(', ');
 
   const text = await callClaude(
-    'You are a senior technical interviewer. Generate targeted interview questions. IMPORTANT: Return raw JSON only — no markdown, no code fences, no backticks. Start response with { and end with }.',
+    'You are a senior technical interviewer. IMPORTANT: Return raw JSON only — no markdown, no code fences, no backticks. Start response with { and end with }.',
     `Generate 3 interview questions per skill (basic, intermediate, advanced).
 
-Skills:
-${skillList}
+Skills: ${skillList}
 
-Return JSON:
-{
-  "questionBank": {
-    "<skill_name>": {
-      "basic": "question text",
-      "intermediate": "question text",
-      "advanced": "question text"
-    }
-  }
-}
+Return compact JSON (no extra whitespace needed):
+{"questionBank":{"Python":{"basic":"question","intermediate":"question","advanced":"question"}}}
 
-Return ONLY the JSON object.`,
-    2048
+Keep each question under 20 words. Return ONLY the JSON object.`,
+    4096
   );
   return parseJSON(text).questionBank;
 }
