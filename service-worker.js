@@ -93,27 +93,37 @@ async function callClaude(systemPrompt, userMessage, maxTokens = 2048) {
 }
 
 function parseJSON(text) {
-  // 1. Try stripping markdown code fences (```json ... ``` or ``` ... ```)
-  const fenceMatch = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
-  if (fenceMatch) {
-    try { return JSON.parse(fenceMatch[1].trim()); } catch (_) {}
+  let raw = text.trim();
+
+  // Strategy 1: strip ``` fences by splitting on lines
+  if (raw.startsWith('`')) {
+    const lines = raw.split('\n');
+    // Remove first line (```json or ```)
+    lines.shift();
+    // Remove last line if it's closing ```
+    if (lines.length && lines[lines.length - 1].trim().startsWith('`')) {
+      lines.pop();
+    }
+    raw = lines.join('\n').trim();
   }
 
-  // 2. Try extracting the first {...} JSON object from the raw text
-  const objMatch = text.match(/\{[\s\S]*\}/);
-  if (objMatch) {
-    try { return JSON.parse(objMatch[0]); } catch (_) {}
+  // Strategy 2: if still not valid JSON, find first { ... } block
+  if (!raw.startsWith('{') && !raw.startsWith('[')) {
+    const start = raw.indexOf('{');
+    const end = raw.lastIndexOf('}');
+    if (start !== -1 && end !== -1) {
+      raw = raw.slice(start, end + 1);
+    }
   }
 
-  // 3. Try parsing the full text as-is (last resort)
-  return JSON.parse(text.trim());
+  return JSON.parse(raw);
 }
 
 // ─── Claude Prompts ─────────────────────────────────────────
 
 async function extractSkills(resumeText) {
   const text = await callClaude(
-    'You are a technical recruiter AI. Extract skills from resumes. Always return valid JSON only, no explanation.',
+    'You are a technical recruiter AI. Extract skills from resumes. IMPORTANT: Return raw JSON only — no markdown, no code fences, no backticks, no explanation. Start your response with { and end with }.',
     `Extract the candidate's skills from this resume.
 
 Return JSON with this structure:
@@ -141,7 +151,7 @@ async function generateQuestions(skills) {
   const skillList = skills.map(s => `- ${s.name} (${s.proficiencySignal})`).join('\n');
 
   const text = await callClaude(
-    'You are a senior technical interviewer. Generate targeted interview questions. Return valid JSON only.',
+    'You are a senior technical interviewer. Generate targeted interview questions. IMPORTANT: Return raw JSON only — no markdown, no code fences, no backticks. Start response with { and end with }.',
     `Generate 3 interview questions per skill (basic, intermediate, advanced).
 
 Skills:
@@ -166,7 +176,7 @@ Return ONLY the JSON object.`,
 
 async function assessAnswer(question, answer, topic) {
   const text = await callClaude(
-    'You are evaluating a live technical interview. Be concise and actionable. Return valid JSON only.',
+    'You are evaluating a live technical interview. Be concise and actionable. IMPORTANT: Return raw JSON only — no markdown, no code fences, no backticks. Start response with { and end with }.',
     `Topic/Skill: ${topic || 'General'}
 Question asked: "${question}"
 Candidate answered: "${answer.substring(0, 2000)}"
@@ -206,7 +216,7 @@ async function generateReport() {
   ).join('\n\n');
 
   const text = await callClaude(
-    'You are a senior hiring manager writing a post-interview assessment. Be fair, specific, evidence-based. Return valid JSON only.',
+    'You are a senior hiring manager writing a post-interview assessment. Be fair, specific, evidence-based. IMPORTANT: Return raw JSON only — no markdown, no code fences, no backticks. Start response with { and end with }.',
     `Candidate: ${session.candidateName || 'Unknown'}
 Interview duration: ${duration} minutes
 Skills tested: ${topicsCovered.join(', ') || 'General'}
