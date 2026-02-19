@@ -93,10 +93,20 @@ async function callClaude(systemPrompt, userMessage, maxTokens = 2048) {
 }
 
 function parseJSON(text) {
-  // Strip markdown code fences if present
-  const match = text.match(/```(?:json)?\n?([\s\S]*?)\n?```/);
-  const raw = match ? match[1] : text;
-  return JSON.parse(raw.trim());
+  // 1. Try stripping markdown code fences (```json ... ``` or ``` ... ```)
+  const fenceMatch = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+  if (fenceMatch) {
+    try { return JSON.parse(fenceMatch[1].trim()); } catch (_) {}
+  }
+
+  // 2. Try extracting the first {...} JSON object from the raw text
+  const objMatch = text.match(/\{[\s\S]*\}/);
+  if (objMatch) {
+    try { return JSON.parse(objMatch[0]); } catch (_) {}
+  }
+
+  // 3. Try parsing the full text as-is (last resort)
+  return JSON.parse(text.trim());
 }
 
 // ─── Claude Prompts ─────────────────────────────────────────
