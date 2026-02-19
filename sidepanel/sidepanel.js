@@ -189,16 +189,26 @@ async function processFile(file) {
     setUploadStatus(`✓ ${file.name} (${Math.round(text.length / 100) * 100} chars extracted)`, 'success');
 
     const candidateName = document.getElementById('candidate-name').value.trim();
-    showProcessing('Sending to AI for analysis…');
+    showProcessing('Sending to AI for analysis… (this may take 15–30 seconds)');
 
-    await sw('UPLOAD_RESUME', {
+    const result = await sw('UPLOAD_RESUME', {
       resumeText: text,
       candidateName: candidateName || 'Candidate',
     });
 
+    if (result?.error) {
+      hideProcessing();
+      showError(result.error);
+      return;
+    }
+
+    // Sync state from service worker — Claude calls are done at this point
+    await syncState();
+
   } catch (e) {
     setUploadStatus(`Error: ${e.message}`, 'error');
     hideProcessing();
+    showError(e.message);
   }
 }
 
@@ -336,20 +346,28 @@ function renderAll() {
 
   const phase = session.phase;
   setStatusBadge(phase.toLowerCase());
+  hideProcessing();
 
-  if (session.skills?.length) renderSkills(session.skills);
-  if (session.questionBank) renderQuestions();
+  if (session.skills?.length) {
+    renderSkills(session.skills);
+    showElement('skills-section');
+  }
+  if (session.questionBank && Object.keys(session.questionBank).length) {
+    renderQuestions();
+  }
   if (session.transcript?.length) renderTranscript(session.transcript.slice(-15));
   if (session.assessments?.length) renderAssessment(session.assessments[session.assessments.length - 1]);
   if (session.currentTopic) setCurrentTopic(session.currentTopic);
   if (session.topicTimeline?.length) renderTopics();
   if (session.report) renderReport(session.report);
 
-  if (phase === 'SETUP' && session.skills?.length) showElement('skills-section');
   if (phase === 'ACTIVE' && session.startedAt) startTimer(session.startedAt);
   if (phase === 'GENERATING_REPORT') {
     showElement('report-loading');
     hideElement('report-content');
+  }
+  if (phase === 'ENDED' && session.report) {
+    switchTab('report');
   }
 }
 

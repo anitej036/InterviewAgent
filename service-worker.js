@@ -358,21 +358,20 @@ async function handleMessage(message, sender) {
         resumeText: message.resumeText,
       };
       await saveState();
-      await broadcast({ type: 'PROCESSING', step: 'Extracting skills from resume...' });
 
       try {
         session.skills = await extractSkills(message.resumeText);
         await saveState();
-        await broadcast({ type: 'SKILLS_EXTRACTED', skills: session.skills });
 
-        await broadcast({ type: 'PROCESSING', step: 'Generating question bank...' });
         session.questionBank = await generateQuestions(session.skills);
         await saveState();
-        await broadcast({ type: 'QUESTIONS_READY', questionBank: session.questionBank });
+
+        // Return success — sidepanel will syncState() to get the data
+        return { ok: true };
       } catch (e) {
-        await broadcast({ type: 'ERROR', message: e.message });
+        console.error('UPLOAD_RESUME error:', e);
+        return { ok: false, error: e.message };
       }
-      return { ok: true };
     }
 
     case 'START_INTERVIEW': {
