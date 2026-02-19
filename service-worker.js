@@ -240,6 +240,31 @@ Return ONLY the JSON object.`,
   return parseJSON(text);
 }
 
+// ─── Speaker Inference ───────────────────────────────────────
+// When DOM-based speaker detection returns 'unknown', infer from text patterns
+
+function inferSpeaker(text, prevSpeaker) {
+  const t = text.trim();
+  const wordCount = t.split(/\s+/).length;
+
+  // Strong signals for interviewer:
+  // - Ends with a question mark
+  // - Short sentence that's clearly a question
+  const isQuestion = t.endsWith('?') || /^(can you|could you|tell me|what|how|why|when|where|explain|describe|have you|do you|did you|are you|would you)/i.test(t);
+
+  // Strong signals for candidate:
+  // - Long response (>15 words)
+  // - Continues from a candidate turn
+  const isLongAnswer = wordCount > 15;
+
+  if (isQuestion && wordCount < 40) return 'interviewer';
+  if (isLongAnswer && prevSpeaker === 'candidate') return 'candidate';
+  if (isQuestion) return 'interviewer';
+  if (prevSpeaker === 'interviewer' && !isQuestion) return 'candidate';
+
+  return 'unknown';
+}
+
 // ─── Topic Detection ─────────────────────────────────────────
 
 function detectTopicFromText(text) {
@@ -261,15 +286,40 @@ function detectTopicFromText(text) {
   return bestScore > 0 ? best : null;
 }
 
+// ─── Silence Timer ────────────────────────────────────────────
+// Auto-trigger assessment after 8 seconds of no new speech
+
+let silenceTimer = null;
+
+function resetSilenceTimer() {
+  if (silenceTimer) clearTimeout(silenceTimer);
+  silenceTimer = setTimeout(() => {
+    // If we have a pending answer after silence, assess it
+    if (session.phase === 'ACTIVE' &&
+        session.pendingAnswer && session.pendingAnswer.length > 30 &&
+        session.pendingQuestion) {
+      triggerAssessment();
+    }
+  }, 8000);
+}
+
 // ─── Utterance Processing ─────────────────────────────────────
 
 async function processUtterance(utterance) {
   if (session.phase !== 'ACTIVE') return;
 
+  // Infer speaker if DOM detection returned 'unknown'
+  const lastEntry = session.transcript[session.transcript.length - 1];
+  const prevSpeaker = lastEntry?.speaker || 'unknown';
+
+  if (utterance.speaker === 'unknown') {
+    utterance.speaker = inferSpeaker(utterance.text, prevSpeaker);
+  }
+
   // Add to transcript
   session.transcript.push({ ...utterance, id: Date.now() + Math.random() });
 
-  // Keep only last 200 entries to avoid storage bloat
+  // Keep only last 200 entries
   if (session.transcript.length > 200) {
     session.transcript = session.transcript.slice(-200);
   }
@@ -286,17 +336,21 @@ async function processUtterance(utterance) {
     await broadcast({ type: 'TOPIC_SWITCHED', topic: detected });
   }
 
-  // Accumulate answer vs detect new question
+  // Accumulate by speaker role
   if (utterance.speaker === 'candidate') {
     session.pendingAnswer = (session.pendingAnswer + ' ' + utterance.text).trim();
+    // Reset silence timer — assessment fires if candidate stops speaking for 8s
+    resetSilenceTimer();
+
   } else if (utterance.speaker === 'interviewer') {
-    // When interviewer speaks again, assess the previous answer
-    if (session.pendingAnswer && session.pendingAnswer.length > 40 && session.pendingQuestion) {
-      triggerAssessment(); // fire-and-forget, don't block
+    // Interviewer spoke again — assess the previous answer first
+    if (session.pendingAnswer && session.pendingAnswer.length > 30 && session.pendingQuestion) {
+      triggerAssessment(); // fire-and-forget
     }
     session.pendingQuestion = utterance.text;
     session.pendingQuestionTopic = session.currentTopic;
     session.pendingAnswer = '';
+    if (silenceTimer) clearTimeout(silenceTimer);
   }
 
   await saveState();
