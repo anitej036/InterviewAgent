@@ -217,15 +217,8 @@
     </div>
   </div>
 
-  <!-- PDF.js -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-  <script>
-    // Set PDF.js worker path
-    if (typeof pdfjsLib !== 'undefined') {
-      pdfjsLib.GlobalWorkerOptions.workerSrc =
-        'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-    }
-  </script>
+  <!-- PDF.js (bundled locally) -->
+  <script src="../lib/pdf.min.js"></script>
   <script src="sidepanel.js"></script>
 </body>
 </html>

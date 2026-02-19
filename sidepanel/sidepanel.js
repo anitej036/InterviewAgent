@@ -2,6 +2,11 @@
 // InterviewAgent - Side Panel Controller
 // ============================================================
 
+// Configure PDF.js worker (must use chrome.runtime.getURL for extension context)
+if (typeof pdfjsLib !== 'undefined') {
+  pdfjsLib.GlobalWorkerOptions.workerSrc = chrome.runtime.getURL('lib/pdf.worker.min.js');
+}
+
 // ─── State ───────────────────────────────────────────────────
 let currentTab = 'setup';
 let selectedLevel = 'basic';
