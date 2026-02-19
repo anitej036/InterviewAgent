@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>InterviewAgent</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 13px;
+      width: 280px;
+      padding: 16px;
+      background: #111827;
+      color: white;
+    }
+    .logo { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+    .subtitle { font-size: 11px; color: #9ca3af; margin-bottom: 16px; }
+    label { display: block; font-size: 11px; color: #9ca3af; margin-bottom: 4px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+    input {
+      width: 100%; padding: 8px 10px; border-radius: 6px;
+      border: 1px solid #374151; background: #1f2937; color: white;
+      font-size: 12px; margin-bottom: 8px;
+    }
+    input:focus { outline: none; border-color: #3b82f6; }
+    .row { display: flex; gap: 6px; }
+    button {
+      flex: 1; padding: 8px; border-radius: 6px; border: none;
+      cursor: pointer; font-size: 12px; font-weight: 500;
+    }
+    .btn-primary { background: #1d4ed8; color: white; }
+    .btn-primary:hover { background: #1e40af; }
+    .btn-outline { background: #374151; color: white; }
+    .btn-outline:hover { background: #4b5563; }
+    .status { font-size: 11px; margin-top: 8px; color: #9ca3af; }
+    .status.ok { color: #34d399; }
+    .status.error { color: #f87171; }
+    .divider { border-top: 1px solid #374151; margin: 14px 0; }
+    .open-panel-btn {
+      width: 100%; padding: 8px; border-radius: 6px; border: none;
+      cursor: pointer; font-size: 12px; font-weight: 500;
+      background: #065f46; color: #34d399;
+    }
+    .open-panel-btn:hover { background: #047857; }
+    .hint { font-size: 10px; color: #6b7280; margin-top: 4px; line-height: 1.4; }
+    .current-key { font-size: 11px; color: #34d399; margin-bottom: 10px; }
+  </style>
+</head>
+<body>
+  <div class="logo">🤖 InterviewAgent</div>
+  <div class="subtitle">AI co-pilot for technical interviews</div>
+
+  <div id="current-key-display" class="current-key hidden"></div>
+
+  <label>Anthropic API Key</label>
+  <input type="password" id="api-key" placeholder="sk-ant-..." />
+  <div class="hint">Required for AI features. Stored in session memory only — cleared on browser close.</div>
+
+  <div class="row" style="margin-top: 8px;">
+    <button class="btn-primary" id="save-btn">Save Key</button>
+    <button class="btn-outline" id="clear-btn">Clear</button>
+  </div>
+  <div id="status" class="status"></div>
+
+  <div class="divider"></div>
+
+  <button class="open-panel-btn" id="open-panel-btn">▶ Open Interview Panel</button>
+  <div class="hint" style="margin-top:6px; text-align:center;">Opens the side panel on Google Meet</div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

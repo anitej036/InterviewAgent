@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>InterviewAgent</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="app">
+
+    <!-- ── Header ── -->
+    <header>
+      <div class="header-left">
+        <span class="logo">🤖 InterviewAgent</span>
+        <span id="status-badge" class="badge badge-idle">IDLE</span>
+      </div>
+      <button id="settings-btn" class="icon-btn" title="Settings">⚙️</button>
+    </header>
+
+    <!-- ── API Key Warning ── -->
+    <div id="api-warning" class="warning-bar hidden">
+      ⚠️ No API key set. Click ⚙️ to add your Anthropic API key.
+    </div>
+
+    <!-- ── Tab Bar ── -->
+    <nav class="tabs">
+      <button class="tab-btn active" data-tab="setup">Setup</button>
+      <button class="tab-btn" data-tab="live">Live</button>
+      <button class="tab-btn" data-tab="topics">Topics</button>
+      <button class="tab-btn" data-tab="report">Report</button>
+    </nav>
+
+    <!-- ═══════════════════════════════════════════════ -->
+    <!--  SETUP TAB                                      -->
+    <!-- ═══════════════════════════════════════════════ -->
+    <div id="tab-setup" class="tab-content active">
+
+      <div class="form-group">
+        <label class="label">Candidate Name</label>
+        <input type="text" id="candidate-name" placeholder="e.g. Jane Smith" class="input" />
+      </div>
+
+      <div class="form-group">
+        <label class="label">Resume PDF</label>
+        <div id="upload-zone" class="upload-zone">
+          <div class="upload-icon">📄</div>
+          <div class="upload-label">Drop PDF here or click to upload</div>
+          <input type="file" id="file-input" accept=".pdf" hidden />
+        </div>
+        <div id="upload-status" class="upload-status"></div>
+      </div>
+
+      <!-- Processing spinner -->
+      <div id="processing-bar" class="processing-bar hidden">
+        <div class="spinner"></div>
+        <span id="processing-text">Processing…</span>
+      </div>
+
+      <!-- Skills section (shown after parsing) -->
+      <div id="skills-section" class="hidden">
+        <div class="section-header">
+          <label class="label">Extracted Skills</label>
+          <span id="skill-count" class="count-badge"></span>
+        </div>
+        <div id="skills-list" class="skills-list"></div>
+        <button id="start-btn" class="btn btn-primary btn-block">▶ Start Interview</button>
+      </div>
+
+    </div>
+
+    <!-- ═══════════════════════════════════════════════ -->
+    <!--  LIVE TAB                                       -->
+    <!-- ═══════════════════════════════════════════════ -->
+    <div id="tab-live" class="tab-content hidden">
+
+      <!-- Status row -->
+      <div class="live-status-row">
+        <div class="topic-pill">
+          <span class="topic-label">Topic:</span>
+          <span id="current-topic">—</span>
+        </div>
+        <span id="timer" class="timer">00:00</span>
+      </div>
+
+      <!-- Last Assessment Card -->
+      <div id="assessment-card" class="card hidden">
+        <div class="card-title-row">
+          <span class="card-title">Last Assessment</span>
+          <div id="score-stars" class="score-stars"></div>
+          <span id="verdict-badge" class="verdict-badge"></span>
+        </div>
+        <p id="assessment-summary" class="assessment-summary"></p>
+        <div id="assessment-gaps" class="gap-pills"></div>
+
+        <!-- Follow-up suggestions -->
+        <div id="followup-section" class="hidden">
+          <div class="followup-label">Suggested Follow-ups</div>
+          <div id="followup-list" class="followup-list"></div>
+        </div>
+      </div>
+
+      <!-- Question Bank -->
+      <div class="section">
+        <div class="section-header">
+          <label class="label">Question Bank</label>
+          <div class="level-filter">
+            <button class="level-btn active" data-level="basic">Basic</button>
+            <button class="level-btn" data-level="intermediate">Mid</button>
+            <button class="level-btn" data-level="advanced">Advanced</button>
+          </div>
+        </div>
+        <div id="skill-filter" class="skill-filter"></div>
+        <div id="question-list" class="question-list"></div>
+      </div>
+
+      <!-- Live Transcript -->
+      <div class="section">
+        <div class="section-header">
+          <label class="label">Transcript</label>
+          <button id="force-assess-btn" class="btn btn-sm">Assess Now</button>
+        </div>
+        <div id="transcript-list" class="transcript-list">
+          <div class="transcript-empty">Listening…</div>
+        </div>
+      </div>
+
+      <button id="end-btn" class="btn btn-danger btn-block">■ End Interview</button>
+
+    </div>
+
+    <!-- ═══════════════════════════════════════════════ -->
+    <!--  TOPICS TAB                                     -->
+    <!-- ═══════════════════════════════════════════════ -->
+    <div id="tab-topics" class="tab-content hidden">
+      <label class="label">Topic Timeline</label>
+      <div id="topic-timeline" class="topic-timeline">
+        <div class="empty-state">Interview not started yet.</div>
+      </div>
+
+      <label class="label mt-16">Coverage</label>
+      <div id="topic-coverage" class="coverage-list"></div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════ -->
+    <!--  REPORT TAB                                     -->
+    <!-- ═══════════════════════════════════════════════ -->
+    <div id="tab-report" class="tab-content hidden">
+
+      <div id="report-loading" class="processing-bar hidden">
+        <div class="spinner"></div>
+        <span>Generating report…</span>
+      </div>
+
+      <div id="report-content" class="hidden">
+
+        <div id="recommendation-card" class="recommendation-card"></div>
+
+        <div class="section">
+          <label class="label">Executive Summary</label>
+          <p id="exec-summary" class="exec-summary"></p>
+        </div>
+
+        <div class="section">
+          <label class="label">Skill Breakdown</label>
+          <div id="skill-breakdown" class="skill-breakdown"></div>
+        </div>
+
+        <div class="two-col">
+          <div>
+            <label class="label">Strengths</label>
+            <ul id="strengths-list" class="bullet-list strengths"></ul>
+          </div>
+          <div>
+            <label class="label">Needs Work</label>
+            <ul id="improve-list" class="bullet-list improve"></ul>
+          </div>
+        </div>
+
+        <div class="section">
+          <label class="label">Coverage</label>
+          <div id="coverage-summary"></div>
+        </div>
+
+        <div class="action-row">
+          <button id="copy-report-btn" class="btn btn-secondary">Copy Report</button>
+          <button id="new-interview-btn" class="btn btn-outline">New Interview</button>
+        </div>
+
+      </div>
+
+      <div id="report-empty" class="empty-state">
+        Complete an interview to generate a report.
+      </div>
+
+    </div>
+
+  </div><!-- /#app -->
+
+  <!-- ── Settings Modal ── -->
+  <div id="settings-modal" class="modal hidden">
+    <div class="modal-box">
+      <div class="modal-header">
+        <span>Settings</span>
+        <button id="close-settings" class="icon-btn">✕</button>
+      </div>
+      <div class="form-group">
+        <label class="label">Anthropic API Key</label>
+        <input type="password" id="api-key-input" placeholder="sk-ant-..." class="input" />
+        <div class="hint">Stored in session memory only. Cleared when browser closes.</div>
+      </div>
+      <div class="action-row">
+        <button id="save-api-key" class="btn btn-primary">Save</button>
+        <button id="clear-api-key" class="btn btn-outline">Clear</button>
+      </div>
+      <div id="api-key-status" class="status-text"></div>
+    </div>
+  </div>
+
+  <!-- PDF.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script>
+    // Set PDF.js worker path
+    if (typeof pdfjsLib !== 'undefined') {
+      pdfjsLib.GlobalWorkerOptions.workerSrc =
+        'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    }
+  </script>
+  <script src="sidepanel.js"></script>
+</body>
+</html>
